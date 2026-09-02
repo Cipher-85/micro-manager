@@ -127,6 +127,31 @@ final class KeymapManagerTests: XCTestCase {
         XCTAssertNotNil(layers[0]["lights"], "per-layer lighting survives")
     }
 
+    /// A Creator Micro 2 has been seen reporting `activeProfileId: -1`. The
+    /// old check only caught ids that were too large, so -1 went straight into
+    /// a subscript and took the app down the moment the bridge started.
+    func testNegativeActiveProfileIdFallsBackToTheFirstProfile() throws {
+        var config = try backupKeymap()
+        config["activeProfileId"] = -1
+
+        XCTAssertEqual(KeymapManager.activeLayerKeymap(config)?[0], ["KC_F13", "KC_F14"])
+        XCTAssertNotNil(KeymapManager.activeLayerLayout(config))
+        XCTAssertFalse(KeymapManager.isAgentKeymapApplied(config))
+
+        let next = try KeymapManager.withAgentKeymap(config)
+        XCTAssertTrue(KeymapManager.isAgentKeymapApplied(next))
+        XCTAssertEqual(next["activeProfileId"] as? Int, -1,
+                       "the id is the pad's to own; only the lookup is clamped")
+    }
+
+    func testOversizedActiveProfileIdFallsBackToTheFirstProfile() throws {
+        var config = try backupKeymap()
+        config["activeProfileId"] = 99
+
+        XCTAssertEqual(KeymapManager.activeLayerKeymap(config)?[0], ["KC_F13", "KC_F14"])
+        XCTAssertTrue(KeymapManager.isAgentKeymapApplied(try KeymapManager.withAgentKeymap(config)))
+    }
+
     func testMalformedInputIsRejectedRatherThanSilentlyAccepted() {
         XCTAssertThrowsError(try KeymapManager.parse(["nope": 1]))
         XCTAssertThrowsError(try KeymapManager.parse(["data": "not json"]))

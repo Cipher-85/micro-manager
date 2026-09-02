@@ -81,13 +81,25 @@ public enum KeymapManager {
         return config
     }
 
+    /// Which of `count` profiles `activeProfileId` names. The id is trusted
+    /// only when it is a real index: a Creator Micro 2 has been seen reporting
+    /// -1 here, and an upper-bound-only check let that straight through to a
+    /// subscript that took the app down the moment the bridge started. Out of
+    /// range in either direction falls back to the first profile, which is
+    /// what an oversized id always did.
+    static func activeProfileIndex(_ config: [String: Any], among count: Int) -> Int {
+        let id = config["activeProfileId"] as? Int ?? 0
+        return (0..<count).contains(id) ? id : 0
+    }
+
     /// `layer_index` from `device.status` is 1-based against this list, so the
     /// active layer is the first one.
     static func activeLayerKeymap(_ config: [String: Any]) -> [[String]]? {
-        let index = config["activeProfileId"] as? Int ?? 0
-        guard let profiles = config["profiles"] as? [[String: Any]] else { return nil }
-        let profile = index < profiles.count ? profiles[index] : profiles.first
-        guard let layers = profile?["layers"] as? [[String: Any]],
+        guard let profiles = config["profiles"] as? [[String: Any]], !profiles.isEmpty else {
+            return nil
+        }
+        let profile = profiles[activeProfileIndex(config, among: profiles.count)]
+        guard let layers = profile["layers"] as? [[String: Any]],
               let layer = layers.first,
               let layout = layer["layout"] as? [String: Any],
               let keymap = layout["keymap"] as? [[String]]
@@ -96,10 +108,11 @@ public enum KeymapManager {
     }
 
     static func activeLayerLayout(_ config: [String: Any]) -> [String: Any]? {
-        let index = config["activeProfileId"] as? Int ?? 0
-        guard let profiles = config["profiles"] as? [[String: Any]] else { return nil }
-        let profile = index < profiles.count ? profiles[index] : profiles.first
-        guard let layers = profile?["layers"] as? [[String: Any]],
+        guard let profiles = config["profiles"] as? [[String: Any]], !profiles.isEmpty else {
+            return nil
+        }
+        let profile = profiles[activeProfileIndex(config, among: profiles.count)]
+        guard let layers = profile["layers"] as? [[String: Any]],
               let layer = layers.first
         else { return nil }
         return layer["layout"] as? [String: Any]
@@ -142,11 +155,10 @@ public enum KeymapManager {
     /// joystick and lighting setting untouched.
     public static func withAgentKeymap(_ config: [String: Any]) throws -> [String: Any] {
         var next = config
-        let index = next["activeProfileId"] as? Int ?? 0
         guard var profiles = next["profiles"] as? [[String: Any]], !profiles.isEmpty else {
             throw Failure.noProfiles
         }
-        let profileIndex = index < profiles.count ? index : 0
+        let profileIndex = activeProfileIndex(next, among: profiles.count)
         var profile = profiles[profileIndex]
         guard var layers = profile["layers"] as? [[String: Any]], !layers.isEmpty else {
             throw Failure.noProfiles

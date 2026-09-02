@@ -203,10 +203,9 @@ public final class PadEmulator: ObservableObject {
                 dict.values.forEach(scan)
             }
         }
-        let index = keymap["activeProfileId"] as? Int ?? 0
-        if let profiles = keymap["profiles"] as? [[String: Any]] {
-            let profile = index < profiles.count ? profiles[index] : profiles.first
-            if let layers = profile?["layers"] as? [[String: Any]], let layer = layers.first {
+        if let profiles = keymap["profiles"] as? [[String: Any]], !profiles.isEmpty {
+            let profile = profiles[KeymapManager.activeProfileIndex(keymap, among: profiles.count)]
+            if let layers = profile["layers"] as? [[String: Any]], let layer = layers.first {
                 scan(layer)
             }
         }
