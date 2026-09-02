@@ -152,6 +152,37 @@ final class KeymapManagerTests: XCTestCase {
         XCTAssertTrue(KeymapManager.isAgentKeymapApplied(try KeymapManager.withAgentKeymap(config)))
     }
 
+    /// The fixture has one profile, so the two fallback tests above cannot
+    /// tell "the first profile" from "any index". A second profile pins both
+    /// halves: an in-range id is honoured, and an id equal to the count is not.
+    func testInRangeActiveProfileIdSelectsThatProfile() throws {
+        var config = try backupKeymap()
+        var profiles = try XCTUnwrap(config["profiles"] as? [[String: Any]])
+        var second = profiles[0]
+        var layers = try XCTUnwrap(second["layers"] as? [[String: Any]])
+        var layout = try XCTUnwrap(layers[0]["layout"] as? [String: Any])
+        var keymap = try XCTUnwrap(layout["keymap"] as? [[String]])
+        keymap[0] = ["KC_A", "KC_B"]   // so the two profiles can be told apart
+        layout["keymap"] = keymap
+        layers[0]["layout"] = layout
+        second["layers"] = layers
+        profiles.append(second)
+        config["profiles"] = profiles
+
+        config["activeProfileId"] = 1
+        XCTAssertEqual(KeymapManager.activeLayerKeymap(config)?[0], ["KC_A", "KC_B"])
+        let next = try KeymapManager.withAgentKeymap(config)
+        XCTAssertTrue(KeymapManager.isAgentKeymapApplied(next), "the rewrite lands on the selected profile")
+        let untouched = try XCTUnwrap((next["profiles"] as? [[String: Any]])?[0])
+        let untouchedKeymap = try XCTUnwrap(
+            ((untouched["layers"] as? [[String: Any]])?[0]["layout"] as? [String: Any])?["keymap"] as? [[String]]
+        )
+        XCTAssertEqual(untouchedKeymap[0], ["KC_F13", "KC_F14"], "the other profile is left alone")
+
+        config["activeProfileId"] = 2   // equal to the count: out of range
+        XCTAssertEqual(KeymapManager.activeLayerKeymap(config)?[0], ["KC_F13", "KC_F14"])
+    }
+
     func testMalformedInputIsRejectedRatherThanSilentlyAccepted() {
         XCTAssertThrowsError(try KeymapManager.parse(["nope": 1]))
         XCTAssertThrowsError(try KeymapManager.parse(["data": "not json"]))

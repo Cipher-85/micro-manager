@@ -86,7 +86,8 @@ public enum KeymapManager {
     /// -1 here, and an upper-bound-only check let that straight through to a
     /// subscript that took the app down the moment the bridge started. Out of
     /// range in either direction falls back to the first profile, which is
-    /// what an oversized id always did.
+    /// what an oversized id always did. Callers reject an empty profile list
+    /// before asking: with no profiles there is no index to give.
     static func activeProfileIndex(_ config: [String: Any], among count: Int) -> Int {
         let id = config["activeProfileId"] as? Int ?? 0
         return (0..<count).contains(id) ? id : 0

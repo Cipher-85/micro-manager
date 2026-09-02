@@ -1,0 +1,4 @@
+# Created by the portable handoff first-run bootstrap.
+[paths]
+handoff = "docs/session-handoff.md"
+archive = "docs/session-archive.md"
