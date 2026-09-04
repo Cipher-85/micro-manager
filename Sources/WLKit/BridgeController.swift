@@ -56,6 +56,9 @@ public final class BridgeController: ObservableObject {
     public var onStackKey: (() -> Void)?
     /// Called when the land key is pressed; same split as `onStackKey`.
     public var onLandKey: (() -> Void)?
+    /// Called for a mapped close action. The panel owns the two-press confirm;
+    /// this does not close anything by itself.
+    public var onCloseKey: ((String) -> Void)?
     /// Called when either half of the wide voice key is pressed.
     public var onVoiceKey: (() -> Void)?
     /// Called per dial detent: +1 clockwise, -1 counter-clockwise.
@@ -447,7 +450,11 @@ public final class BridgeController: ObservableObject {
         case .gitButlerStatus:
             onStackKey?()
         case .herdr(let name):
-            Task { await performHerdr(name) }
+            if PadCatalog.closeNames.contains(name) {
+                onCloseKey?(name)
+            } else {
+                Task { await performHerdr(name) }
+            }
         case .gitButlerLand:
             onLandKey?()
         case .injectPrompt(let text):

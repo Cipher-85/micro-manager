@@ -181,6 +181,7 @@ halves. Dial and stick may also be named:
 
 - Land confirm uses the mapped `.gitButlerLand` action, not `Pad.landKeyID`.
 - Config directory watch reloads PadMap without a toggle.
+- Destructive closes use land-style confirm; AG19 stays unbound (stock dial click).
 
 ## Out of scope
 

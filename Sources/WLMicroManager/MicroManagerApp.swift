@@ -34,6 +34,9 @@ struct MicroManagerApp: App {
                     }
                     bridge.onLandKey = { land.handleLandKey() }
 
+                    let close = ClosePanelController.shared
+                    bridge.onCloseKey = { name in close.handleCloseKey(name) }
+
                     let voice = VoiceController.shared
                     voice.onActiveChange = { [weak bridge] active in
                         Task { await bridge?.setVoiceActive(active) }
@@ -52,11 +55,18 @@ struct MicroManagerApp: App {
                     }
                     bridge.onDial = { step in tune.handleDial(step) }
                     bridge.onJoystick = { direction in tune.handleJoystick(direction) }
-                    // While a land confirmation is up, every key that is not
-                    // the mapped land action means "cancel", nothing else.
+                    // Close confirm takes priority over land if it is up.
+                    // Pass through the armed close / land action; any other
+                    // key means "cancel", nothing else.
                     bridge.onKeyIntercept = { [weak bridge] index in
                         guard let action = bridge?.padMap.action(for: index) else { return false }
-                        guard !PadMap.passesLandConfirm(action) else { return false }
+                        if close.isConfirming {
+                            if PadMap.passesCloseConfirm(action, armed: close.armed) {
+                                return false
+                            }
+                            return close.handleOtherKey()
+                        }
+                        if PadMap.passesLandConfirm(action) { return false }
                         return land.handleOtherKey()
                     }
 

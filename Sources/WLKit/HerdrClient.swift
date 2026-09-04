@@ -83,20 +83,29 @@ public struct HerdrTab: Equatable, Sendable {
     /// Display position within the workspace, which is the order tabs cycle in.
     public var number: Int
     public var focused: Bool
+    public var label: String
 
     init(json: [String: Any]) {
         tabID = json["tab_id"] as? String ?? ""
         workspaceID = json["workspace_id"] as? String ?? ""
         number = json["number"] as? Int ?? 0
         focused = json["focused"] as? Bool ?? false
+        label = json["label"] as? String ?? ""
     }
 
     /// For tests.
-    public init(tabID: String, workspaceID: String = "ws", number: Int, focused: Bool = false) {
+    public init(
+        tabID: String,
+        workspaceID: String = "ws",
+        number: Int,
+        focused: Bool = false,
+        label: String = ""
+    ) {
         self.tabID = tabID
         self.workspaceID = workspaceID
         self.number = number
         self.focused = focused
+        self.label = label
     }
 }
 
@@ -104,18 +113,26 @@ public struct HerdrWorkspace: Equatable, Sendable {
     public var workspaceID: String
     public var number: Int
     public var focused: Bool
+    public var label: String
 
     init(json: [String: Any]) {
         workspaceID = json["workspace_id"] as? String ?? ""
         number = json["number"] as? Int ?? 0
         focused = json["focused"] as? Bool ?? false
+        label = json["label"] as? String ?? ""
     }
 
     /// For tests.
-    public init(workspaceID: String, number: Int, focused: Bool = false) {
+    public init(
+        workspaceID: String,
+        number: Int,
+        focused: Bool = false,
+        label: String = ""
+    ) {
         self.workspaceID = workspaceID
         self.number = number
         self.focused = focused
+        self.label = label
     }
 }
 
@@ -269,6 +286,18 @@ public enum HerdrClient {
             "pane_id": paneID,
             "direction": direction,
         ])
+    }
+
+    public static func closePane(paneID: String) async throws {
+        _ = try await request("pane.close", params: ["pane_id": paneID])
+    }
+
+    public static func closeTab(tabID: String) async throws {
+        _ = try await request("tab.close", params: ["tab_id": tabID])
+    }
+
+    public static func closeWorkspace(workspaceID: String) async throws {
+        _ = try await request("workspace.close", params: ["workspace_id": workspaceID])
     }
 
     /// Injects key chords into a pane, crossterm-style names ("ctrl+alt+v",

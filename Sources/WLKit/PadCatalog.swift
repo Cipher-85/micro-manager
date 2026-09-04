@@ -4,6 +4,12 @@ import Foundation
 /// both read this so a new dispatched herdr name only has to be listed once.
 public enum PadCatalog {
 
+    public static let closeNames = [
+        "close_pane",
+        "close_tab",
+        "close_workspace",
+    ]
+
     public static let herdrNames = [
         "next_tab",
         "previous_tab",
@@ -17,7 +23,7 @@ public enum PadCatalog {
         "focus_pane_down",
         "next_workspace",
         "previous_workspace",
-    ]
+    ] + closeNames
 
     public static func herdrHelp(_ name: String) -> String {
         switch name {
@@ -33,6 +39,9 @@ public enum PadCatalog {
         case "focus_pane_down": return "Focus the pane below"
         case "next_workspace": return "Next Herdr workspace"
         case "previous_workspace": return "Previous Herdr workspace"
+        case "close_pane": return "Close the focused pane (two-press confirm)"
+        case "close_tab": return "Close the focused tab (two-press confirm)"
+        case "close_workspace": return "Close the focused workspace (two-press confirm)"
         default: return "Herdr: \(name)"
         }
     }
@@ -51,6 +60,9 @@ public enum PadCatalog {
         case "focus_pane_down": return "Focus down"
         case "next_workspace": return "Next workspace"
         case "previous_workspace": return "Previous workspace"
+        case "close_pane": return "Close pane"
+        case "close_tab": return "Close tab"
+        case "close_workspace": return "Close workspace"
         default: return name
         }
     }

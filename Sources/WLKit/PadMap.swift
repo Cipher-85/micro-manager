@@ -62,6 +62,13 @@ public struct PadMap: Sendable, Equatable {
         action == .gitButlerLand
     }
 
+    /// While a close confirmation is up, only the armed close action confirms;
+    /// anything else cancels. `armed` is the herdr name being confirmed.
+    public static func passesCloseConfirm(_ action: PadAction, armed: String?) -> Bool {
+        guard let armed, PadCatalog.closeNames.contains(armed) else { return false }
+        return action == .herdr(armed)
+    }
+
     /// Assigning either half of the wide key sets both.
     public mutating func set(_ action: PadAction, for key: Int) {
         if key == 10 || key == 11 {

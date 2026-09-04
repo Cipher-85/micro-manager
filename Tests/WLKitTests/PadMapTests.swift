@@ -114,6 +114,22 @@ final class PadMapTests: XCTestCase {
         XCTAssertFalse(PadMap.passesLandConfirm(.herdr("next_tab")))
     }
 
+    func testCloseConfirmPassesOnlyTheArmedCloseAction() {
+        XCTAssertTrue(PadMap.passesCloseConfirm(.herdr("close_pane"), armed: "close_pane"))
+        XCTAssertTrue(PadMap.passesCloseConfirm(.herdr("close_tab"), armed: "close_tab"))
+        XCTAssertFalse(PadMap.passesCloseConfirm(.herdr("close_tab"), armed: "close_pane"))
+        XCTAssertFalse(PadMap.passesCloseConfirm(.herdr("next_tab"), armed: "close_pane"))
+        XCTAssertFalse(PadMap.passesCloseConfirm(.gitButlerLand, armed: "close_pane"))
+        XCTAssertFalse(PadMap.passesCloseConfirm(.herdr("close_pane"), armed: nil))
+        XCTAssertFalse(PadMap.passesCloseConfirm(.herdr("next_tab"), armed: "next_tab"))
+    }
+
+    func testCloseNamesAreInTheHerdrCatalog() {
+        for name in PadCatalog.closeNames {
+            XCTAssertTrue(PadCatalog.herdrNames.contains(name), name)
+        }
+    }
+
     // MARK: - Encode and save
 
     private func roundTrip(_ map: PadMap) throws -> PadMap {
