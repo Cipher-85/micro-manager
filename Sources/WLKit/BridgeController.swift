@@ -335,22 +335,14 @@ public final class BridgeController: ObservableObject {
         reconcileStatusStreams(fetched)
 
         let state = StatusMapper.aggregate(fetched, config)
-        // Macro and voice keys share ids, so the binding decides each key's
-        // light: configured text wins, the wide key falls back to voice.
-        let flexKeys = (Pad.macroKeyIDs + Pad.voiceKeyIDs).map { key -> OAI.Thread in
-            if keyBindings.text(for: key) != nil {
-                return StatusMapper.macroThread(id: key, config)
-            }
-            if Pad.voiceKeyIDs.contains(key) {
-                return StatusMapper.voiceThread(id: key, active: voiceActive, config)
-            }
-            return OAI.Thread(id: key, brightness: 0, effect: .off)
-        }
-        let threads = StatusMapper.threads(for: fetched, config)
-            + [StatusMapper.stackThread(open: stackPanelOpen, config),
-               StatusMapper.tabCycleThread(config),
-               StatusMapper.landThread(open: landPanelOpen, config)]
-            + flexKeys
+        let threads = StatusMapper.threads(
+            for: fetched,
+            map: padMap,
+            stackOpen: stackPanelOpen,
+            landOpen: landPanelOpen,
+            voiceActive: voiceActive,
+            config
+        )
 
         // Fingerprint the whole rendered picture, not just the aggregate, so
         // one agent changing still repaints when the worst state has not.

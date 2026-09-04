@@ -128,6 +128,71 @@ final class StatusMapperTests: XCTestCase {
         XCTAssertNil(OAI.agIndex("KC_F13"))
         XCTAssertNil(OAI.agIndex(nil))
     }
+
+    // MARK: - Map lighting
+
+    private func padMap(_ json: String) -> PadMap {
+        PadMap.parse(Data(json.utf8))
+    }
+
+    private func thread(_ threads: [OAI.Thread], id: Int) -> OAI.Thread {
+        threads.first { $0.id == id }!
+    }
+
+    func testDefaultMapPaintsEachKeyFromItsAction() {
+        let threads = StatusMapper.threads(
+            for: [agent("working"), agent("blocked"), agent("idle")],
+            map: PadMap()
+        )
+        XCTAssertEqual(threads.count, 13)
+        XCTAssertEqual(threads.map(\.id), Array(0...12))
+        XCTAssertEqual(thread(threads, id: 1).color, 0xFFA000)
+        XCTAssertEqual(thread(threads, id: 0).color, 0xFF2D2D)
+        XCTAssertEqual(thread(threads, id: 2).color, 0x00C853)
+        XCTAssertEqual(thread(threads, id: 6).color, 0x7C4DFF)
+        XCTAssertEqual(thread(threads, id: 7).color, 0x00BFA5)
+        XCTAssertEqual(thread(threads, id: 8).color, 0xE91E63)
+        XCTAssertEqual(thread(threads, id: 9).color, 0x90A4AE)
+        XCTAssertEqual(thread(threads, id: 12).color, 0x90A4AE)
+        XCTAssertEqual(thread(threads, id: 10).color, 0xECEFF1)
+        XCTAssertEqual(thread(threads, id: 11).color, 0xECEFF1)
+        for id in [3, 4, 5] {
+            XCTAssertEqual(thread(threads, id: id).effect, .off)
+            XCTAssertEqual(thread(threads, id: id).brightness, 0)
+            XCTAssertNil(thread(threads, id: id).color)
+        }
+    }
+
+    func testMapOverlayPromptPaintsMacroNotStack() {
+        let map = padMap(#"{"map": {"6": {"action": "injectPrompt", "text": "hi"}}}"#)
+        let threads = StatusMapper.threads(for: [agent("working")], map: map)
+        XCTAssertEqual(thread(threads, id: 6).color, 0x90A4AE)
+        XCTAssertNotEqual(thread(threads, id: 6).color, 0x7C4DFF)
+    }
+
+    func testMapMovesAgentColourWithFocusSlot() {
+        let map = padMap(#"{"map": {"6": {"action": "focusSlot", "slot": 0}, "1": {"action": "voice"}}}"#)
+        let threads = StatusMapper.threads(for: [agent("working")], map: map)
+        XCTAssertEqual(thread(threads, id: 6).color, 0xFFA000)
+        XCTAssertEqual(thread(threads, id: 1).color, 0xECEFF1)
+    }
+
+    func testOpenStackBreathesOnGitButlerStatusKey() {
+        let map = padMap(#"{"map": {"6": {"action": "voice"}, "9": {"action": "gitButlerStatus"}}}"#)
+        let threads = StatusMapper.threads(for: [], map: map, stackOpen: true)
+        XCTAssertEqual(thread(threads, id: 9).color, 0x7C4DFF)
+        XCTAssertEqual(thread(threads, id: 9).effect, .breath)
+        XCTAssertEqual(thread(threads, id: 6).color, 0xECEFF1)
+        XCTAssertEqual(thread(threads, id: 6).effect, .solid)
+    }
+
+    func testUnboundKeyIsOff() {
+        let map = padMap(#"{"map": {"6": {"action": "explode"}}}"#)
+        let key = thread(StatusMapper.threads(for: [], map: map), id: 6)
+        XCTAssertEqual(key.effect, .off)
+        XCTAssertEqual(key.brightness, 0)
+        XCTAssertNil(key.color)
+    }
 }
 
 // MARK: - Status colours must stay distinguishable

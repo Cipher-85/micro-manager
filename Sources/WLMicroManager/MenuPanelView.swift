@@ -101,30 +101,10 @@ struct MenuPanelView: View {
     private func keyView(_ index: Int) -> some View {
         let color = bridge.keyColors[index]
         let isBound = Pad.boundKeyIDs.contains(index)
-        let isStackKey = index == Pad.stackKeyID
-        let isTabCycleKey = index == Pad.tabCycleKeyID
-        let isLandKey = index == Pad.landKeyID
-        let macroText = bridge.keyBindings.text(for: index)
-        let isVoiceKey = macroText == nil && Pad.voiceKeyIDs.contains(index)
-        // Key index and agent slot are different orderings — the top row is
-        // wired right to left — so the slot lookup goes through the pad map.
-        let slot = Pad.agentSlot(for: index)
-        let agent = slot.flatMap { $0 < bridge.agents.count ? bridge.agents[$0] : nil }
+        let action = bridge.padMap.action(for: index)
 
         return Button {
-            if isStackKey {
-                StackPanelController.shared.toggle()
-            } else if isTabCycleKey {
-                Task { await bridge.cycleTabs() }
-            } else if isLandKey {
-                LandPanelController.shared.handleLandKey()
-            } else if let macroText {
-                Task { await bridge.injectPrompt(macroText) }
-            } else if isVoiceKey {
-                VoiceController.shared.handleVoiceKey()
-            } else if let slot, agent != nil {
-                Task { await bridge.focusSlot(slot) }
-            }
+            bridge.handleKeyPress(index)
         } label: {
             RoundedRectangle(cornerRadius: 5)
                 .fill(color ?? Color.secondary.opacity(isBound ? 0.16 : 0.07))
@@ -135,29 +115,43 @@ struct MenuPanelView: View {
                 )
         }
         .buttonStyle(.plain)
-        .disabled(agent == nil && !isStackKey && !isTabCycleKey && !isLandKey
-                  && macroText == nil && !isVoiceKey)
-        .help(helpText(index, agent: agent, isStackKey: isStackKey,
-                       isTabCycleKey: isTabCycleKey, isLandKey: isLandKey,
-                       macroText: macroText, isVoiceKey: isVoiceKey))
+        .disabled(!isEnabled(action))
+        .help(helpText(action, index: index))
     }
 
-    private func helpText(
-        _ index: Int,
-        agent: HerdrAgent?,
-        isStackKey: Bool,
-        isTabCycleKey: Bool,
-        isLandKey: Bool,
-        macroText: String?,
-        isVoiceKey: Bool
-    ) -> String {
-        if isStackKey { return "GitButler stack for the focused agent" }
-        if isTabCycleKey { return "Cycle tabs in the focused Herdr window" }
-        if isLandKey { return "Land the focused agent's branches onto the target" }
-        if let macroText { return "Type: \(macroText)" }
-        if isVoiceKey { return "Right command — start or stop Superwhisper" }
-        if let agent { return "\(agent.shortName) — \(agent.status)" }
-        return "Key \(index)"
+    private func isEnabled(_ action: PadAction) -> Bool {
+        switch action {
+        case .unbound:
+            return false
+        case .focusSlot(let slot):
+            return slot >= 0 && slot < bridge.agents.count
+        default:
+            return true
+        }
+    }
+
+    private func helpText(_ action: PadAction, index: Int) -> String {
+        switch action {
+        case .gitButlerStatus:
+            return "GitButler stack for the focused agent"
+        case .herdr:
+            return "Cycle tabs in the focused Herdr window"
+        case .gitButlerLand:
+            return "Land the focused agent's branches onto the target"
+        case .injectPrompt(let text):
+            return "Type: \(text)"
+        case .voice:
+            return "Right command — start or stop Superwhisper"
+        case .focusSlot(let slot) where slot < bridge.agents.count:
+            let agent = bridge.agents[slot]
+            return "\(agent.shortName) — \(agent.status)"
+        case .effort:
+            return "Reasoning effort"
+        case .model:
+            return "Model"
+        case .focusSlot, .unbound:
+            return "Key \(index)"
+        }
     }
 
     // MARK: - Agents

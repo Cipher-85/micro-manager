@@ -1,6 +1,6 @@
 # Pad-map customization
 
-Status: **in progress — phase 1**
+Status: **done — phase 2**
 
 A real customization layer for the Creator Micro 2. Firmware key ids 0...18
 (the 13 keys, dial, and stick) map to a `PadAction`. Today's hardcoded
@@ -20,8 +20,9 @@ HID debugger and is **not** the editor.
 next to `KeyBindings`.
 
 `KeyBindings` is left as-is (claude/codex lists and the `keys` reader).
-`PadMap` reads the same JSON independently. `StatusMapper` and Inspector are
-untouched in phase 1.
+`PadMap` reads the same JSON independently. Inspector is not the editor.
+`StatusMapper.threads(for agents)` still returns the six agent-key threads
+in reading order. Lighting for the pad goes through the map overload.
 
 Interface: firmware key id → `PadAction`. There is one dispatch path.
 `BridgeController.handleKeyPress` switches on `padMap.action(for:)`. No
@@ -155,12 +156,13 @@ halves. Dial and stick may also be named:
 
 ## Phases
 
-1. **PadMap + dispatch (this slice).** Parse overlay, default table, replace
-   `handleKeyPress`. v1 herdr name: `next_tab` only. Lighting, Inspector, and
-   `KeyBindings` lists unchanged.
-2. **Lighting follows the map.** `StatusMapper` still paints by physical
-   role (stack key, voice halves, macros). A remapped key should light as
-   what it *does*.
+1. **PadMap + dispatch — done.** Parse overlay, default table, replace
+   `handleKeyPress`. v1 herdr name: `next_tab` only.
+2. **Lighting follows the map — done.** `StatusMapper.threads(for:map:…)`
+   returns 13 threads, ids 0...12, painted from `map.action(for:)`. Stack /
+   tab / land thread helpers take an `id` so a remapped key carries the
+   light. `BridgeController.refresh` uses that overload. Menu pad clicks go
+   through `handleKeyPress`; help and disabled follow the action.
 3. **Herdr catalog.** Dispatch names besides `next_tab`. Unknown names stay
    no-ops; still never crash.
 4. **Editor in Micro Manager.** A map UI in the menu-bar app (panel or

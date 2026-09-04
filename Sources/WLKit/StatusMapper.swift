@@ -94,6 +94,47 @@ public enum StatusMapper {
         }
     }
 
+    /// One thread per visible key, painted from what that key does rather than
+    /// where it sits. Always `Pad.keyCount` entries, ids 0...12, so a remap
+    /// moves the light with the action.
+    public static func threads(
+        for agents: [HerdrAgent],
+        map: PadMap,
+        stackOpen: Bool = false,
+        landOpen: Bool = false,
+        voiceActive: Bool = false,
+        _ cfg: BridgeConfig = BridgeConfig()
+    ) -> [OAI.Thread] {
+        (0..<Pad.keyCount).map { id in
+            switch map.action(for: id) {
+            case .focusSlot(let slot):
+                guard slot >= 0, slot < agents.count else {
+                    return OAI.Thread(id: id, brightness: 0, effect: .off)
+                }
+                let state = agents[slot].status
+                return OAI.Thread(
+                    id: id,
+                    color: cfg.color(for: state),
+                    brightness: cfg.brightness,
+                    effect: cfg.effect(for: state),
+                    speed: cfg.speed
+                )
+            case .gitButlerStatus:
+                return stackThread(id: id, open: stackOpen, cfg)
+            case .herdr:
+                return tabCycleThread(id: id, cfg)
+            case .gitButlerLand:
+                return landThread(id: id, open: landOpen, cfg)
+            case .injectPrompt, .effort, .model:
+                return macroThread(id: id, cfg)
+            case .voice:
+                return voiceThread(id: id, active: voiceActive, cfg)
+            case .unbound:
+                return OAI.Thread(id: id, brightness: 0, effect: .off)
+            }
+        }
+    }
+
     /// The stack key's own thread. It stays lit whenever the bridge is
     /// running: binding it to an AG keycode took away the keystroke it used to
     /// send, so an unlit key would just read as broken. Breathing while the
@@ -102,8 +143,16 @@ public enum StatusMapper {
         open: Bool,
         _ cfg: BridgeConfig = BridgeConfig()
     ) -> OAI.Thread {
+        stackThread(id: Pad.stackKeyID, open: open, cfg)
+    }
+
+    public static func stackThread(
+        id: Int,
+        open: Bool,
+        _ cfg: BridgeConfig = BridgeConfig()
+    ) -> OAI.Thread {
         OAI.Thread(
-            id: Pad.stackKeyID,
+            id: id,
             color: cfg.stackColor,
             brightness: open ? cfg.brightness : cfg.brightness * 0.3,
             effect: open ? .breath : .solid,
@@ -114,8 +163,12 @@ public enum StatusMapper {
     /// The tab-cycle key's thread. Dimly lit whenever the bridge runs, for the
     /// same reason as the stack key: a bound-but-dark key reads as broken.
     public static func tabCycleThread(_ cfg: BridgeConfig = BridgeConfig()) -> OAI.Thread {
+        tabCycleThread(id: Pad.tabCycleKeyID, cfg)
+    }
+
+    public static func tabCycleThread(id: Int, _ cfg: BridgeConfig = BridgeConfig()) -> OAI.Thread {
         OAI.Thread(
-            id: Pad.tabCycleKeyID,
+            id: id,
             color: cfg.tabCycleColor,
             brightness: cfg.brightness * 0.3,
             effect: .solid,
@@ -129,8 +182,16 @@ public enum StatusMapper {
         open: Bool,
         _ cfg: BridgeConfig = BridgeConfig()
     ) -> OAI.Thread {
+        landThread(id: Pad.landKeyID, open: open, cfg)
+    }
+
+    public static func landThread(
+        id: Int,
+        open: Bool,
+        _ cfg: BridgeConfig = BridgeConfig()
+    ) -> OAI.Thread {
         OAI.Thread(
-            id: Pad.landKeyID,
+            id: id,
             color: cfg.landColor,
             brightness: open ? cfg.brightness : cfg.brightness * 0.3,
             effect: open ? .breath : .solid,
