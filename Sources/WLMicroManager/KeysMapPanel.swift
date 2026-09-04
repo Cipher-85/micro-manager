@@ -85,6 +85,7 @@ private enum FormKind: String, CaseIterable, Identifiable {
 struct KeysMapView: View {
     @EnvironmentObject var bridge: BridgeController
     @State private var draft = PadMap()
+    @State private var lastApplied = PadMap()
     @State private var selected = 1
     @State private var kind: FormKind = .agent
 
@@ -103,6 +104,13 @@ struct KeysMapView: View {
         .onAppear { loadFromBridge() }
         .onChange(of: selected) { _ in
             kind = FormKind(draft.action(for: selected))
+        }
+        .onChange(of: bridge.padMap) { newMap in
+            if draft == lastApplied {
+                draft = newMap
+                kind = FormKind(draft.action(for: selected))
+            }
+            lastApplied = newMap
         }
     }
 
@@ -298,6 +306,7 @@ struct KeysMapView: View {
 
     private func loadFromBridge() {
         draft = bridge.padMap
+        lastApplied = bridge.padMap
         kind = FormKind(draft.action(for: selected))
     }
 

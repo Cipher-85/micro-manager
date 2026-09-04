@@ -80,6 +80,7 @@ public final class BridgeController: ObservableObject {
     private var lastFingerprint: String?
     private var issuedIDs = Set<Int>()
     private var warnedPermission = false
+    private var configWatcher: ConfigFileWatcher?
 
     public init(config: BridgeConfig = BridgeConfig()) {
         self.config = config
@@ -137,6 +138,7 @@ public final class BridgeController: ObservableObject {
         contendingClient = false
         keyBindings = KeyBindings.load()
         padMap = PadMap.load()
+        startConfigWatch()
 
         await openDevice()
         startLifecycleStream()
@@ -155,6 +157,8 @@ public final class BridgeController: ObservableObject {
 
     public func stop() async {
         isRunning = false
+        configWatcher?.stop()
+        configWatcher = nil
         pollTask?.cancel(); pollTask = nil
         debounceTask?.cancel(); debounceTask = nil
         reopenTask?.cancel(); reopenTask = nil
@@ -323,6 +327,24 @@ public final class BridgeController: ObservableObject {
     /// Installs a new map in memory, writes `map` to config.json, and
     /// repaints. A save failure is reported on `lastError` but does not
     /// roll back the in-memory map. Lighting no-ops when the bridge is off.
+    private func startConfigWatch() {
+        configWatcher?.stop()
+        let watcher = ConfigFileWatcher(path: KeyBindings.configPath()) { [weak self] in
+            Task { @MainActor in
+                await self?.reloadConfigFromDisk()
+            }
+        }
+        configWatcher = watcher
+        watcher.start()
+    }
+
+    private func reloadConfigFromDisk() async {
+        guard isRunning else { return }
+        padMap = PadMap.load()
+        keyBindings = KeyBindings.load()
+        await forceRepaint()
+    }
+
     public func replacePadMap(_ map: PadMap) async {
         padMap = map
         do {

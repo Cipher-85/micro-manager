@@ -53,9 +53,10 @@ struct MicroManagerApp: App {
                     bridge.onDial = { step in tune.handleDial(step) }
                     bridge.onJoystick = { direction in tune.handleJoystick(direction) }
                     // While a land confirmation is up, every key that is not
-                    // the land key means "cancel", nothing else.
-                    bridge.onKeyIntercept = { index in
-                        guard index != Pad.landKeyID else { return false }
+                    // the mapped land action means "cancel", nothing else.
+                    bridge.onKeyIntercept = { [weak bridge] index in
+                        guard let action = bridge?.padMap.action(for: index) else { return false }
+                        guard !PadMap.passesLandConfirm(action) else { return false }
                         return land.handleOtherKey()
                     }
 

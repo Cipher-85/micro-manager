@@ -56,6 +56,12 @@ public struct PadMap: Sendable, Equatable {
         actions[key] ?? .unbound
     }
 
+    /// While land confirmation is up, this action confirms; anything else
+    /// cancels. Tied to the mapped action, not `Pad.landKeyID`.
+    public static func passesLandConfirm(_ action: PadAction) -> Bool {
+        action == .gitButlerLand
+    }
+
     /// Assigning either half of the wide key sets both.
     public mutating func set(_ action: PadAction, for key: Int) {
         if key == 10 || key == 11 {

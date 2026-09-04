@@ -176,6 +176,11 @@ halves. Dial and stick may also be named:
    (`PadMap.save`) and `replacePadMap` hot-reloads in memory then
    `forceRepaint`. No file watcher.
 
+## Follow-ups
+
+- Land confirm uses the mapped `.gitButlerLand` action, not `Pad.landKeyID`.
+- Config directory watch reloads PadMap without a toggle.
+
 ## Out of scope
 
 - Plan 1 `PadEngine` / `ActionRunner` / `ProfileSwitcher` / harness profiles

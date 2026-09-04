@@ -106,6 +106,14 @@ final class PadMapTests: XCTestCase {
         XCTAssertEqual(map.action(for: 7), .herdr("next_tab"))
     }
 
+    func testLandConfirmPassesOnlyTheLandAction() {
+        XCTAssertTrue(PadMap.passesLandConfirm(.gitButlerLand))
+        XCTAssertFalse(PadMap.passesLandConfirm(.gitButlerStatus))
+        XCTAssertFalse(PadMap.passesLandConfirm(.unbound))
+        XCTAssertFalse(PadMap.passesLandConfirm(.focusSlot(0)))
+        XCTAssertFalse(PadMap.passesLandConfirm(.herdr("next_tab")))
+    }
+
     // MARK: - Encode and save
 
     private func roundTrip(_ map: PadMap) throws -> PadMap {
