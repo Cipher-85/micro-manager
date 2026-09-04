@@ -206,7 +206,7 @@ public enum Pad {
     public static let joySouthID = 17   // sector centred on 0.75
     public static let joyEastID = 18    // sector centred on 0.0
 
-    public enum JoystickDirection {
+    public enum JoystickDirection: Equatable, Sendable {
         case north, south, east, west
 
         public init?(keyID: Int) {

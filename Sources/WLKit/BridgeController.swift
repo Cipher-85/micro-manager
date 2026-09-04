@@ -48,6 +48,8 @@ public final class BridgeController: ObservableObject {
     /// Text macros for the spare keys, reloaded on every bridge start so a
     /// config edit only needs an off/on toggle, not a relaunch.
     public private(set) var keyBindings = KeyBindings.load()
+    /// Firmware key id to action, reloaded next to `keyBindings`.
+    public private(set) var padMap = PadMap.load()
 
     /// Called when the stack key is pressed. The bridge owns the key, the app
     /// owns the window, so this is where the two meet.
@@ -134,6 +136,7 @@ public final class BridgeController: ObservableObject {
         lastError = nil
         contendingClient = false
         keyBindings = KeyBindings.load()
+        padMap = PadMap.load()
 
         await openDevice()
         startLifecycleStream()
@@ -409,30 +412,31 @@ public final class BridgeController: ObservableObject {
 
     // MARK: - Key presses
 
-    /// Every bound key arrives here. Which key does what is the one place that
-    /// has to agree with `Pad`, so keep the dispatch in a single switch.
+    /// Every bound key arrives here. `PadMap` owns which key does what; this
+    /// switch is the one place that runs those actions.
     public func handleKeyPress(_ index: Int) {
         if onKeyIntercept?(index) == true { return }
-        if index == Pad.stackKeyID {
+        switch padMap.action(for: index) {
+        case .gitButlerStatus:
             onStackKey?()
-        } else if index == Pad.tabCycleKeyID {
+        case .herdr("next_tab"):
             Task { await cycleTabs() }
-        } else if index == Pad.landKeyID {
+        case .herdr:
+            break
+        case .gitButlerLand:
             onLandKey?()
-        } else if Pad.macroKeyIDs.contains(index) || Pad.voiceKeyIDs.contains(index) {
-            // A configured text macro wins over the key's built-in role, which
-            // is how the config file may repurpose the wide voice key.
-            if let text = keyBindings.text(for: index) {
-                Task { await injectPrompt(text) }
-            } else if Pad.voiceKeyIDs.contains(index) {
-                onVoiceKey?()
-            }
-        } else if index == Pad.dialUpID || index == Pad.dialDownID {
-            onDial?(index == Pad.dialUpID ? 1 : -1)
-        } else if let direction = Pad.JoystickDirection(keyID: index) {
+        case .injectPrompt(let text):
+            Task { await injectPrompt(text) }
+        case .voice:
+            onVoiceKey?()
+        case .effort(let step):
+            onDial?(step)
+        case .model(let direction):
             onJoystick?(direction)
-        } else if let slot = Pad.agentSlot(for: index) {
+        case .focusSlot(let slot):
             Task { await focusSlot(slot) }
+        case .unbound:
+            break
         }
     }
 
