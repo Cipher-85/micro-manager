@@ -56,6 +56,95 @@ public struct PadMap: Sendable, Equatable {
         actions[key] ?? .unbound
     }
 
+    /// Assigning either half of the wide key sets both.
+    public mutating func set(_ action: PadAction, for key: Int) {
+        if key == 10 || key == 11 {
+            actions[10] = action
+            actions[11] = action
+            return
+        }
+        actions[key] = action
+    }
+
+    public func encodedMap() -> [String: Any] {
+        var result: [String: Any] = [:]
+        for id in 0...12 where id != 10 && id != 11 {
+            result["\(id)"] = Self.encode(action(for: id))
+        }
+        if action(for: 10) == action(for: 11) {
+            result["10+11"] = Self.encode(action(for: 10))
+        } else {
+            result["10"] = Self.encode(action(for: 10))
+            result["11"] = Self.encode(action(for: 11))
+        }
+        result["dial"] = [
+            "cw": Self.encode(action(for: 13)),
+            "ccw": Self.encode(action(for: 14)),
+        ]
+        result["stick"] = [
+            "n": Self.encode(action(for: 15)),
+            "w": Self.encode(action(for: 16)),
+            "s": Self.encode(action(for: 17)),
+            "e": Self.encode(action(for: 18)),
+        ]
+        return result
+    }
+
+    public static func encode(_ action: PadAction) -> [String: Any] {
+        switch action {
+        case .focusSlot(let slot):
+            return ["action": "focusSlot", "slot": slot]
+        case .herdr(let name):
+            return ["action": "herdr", "name": name]
+        case .injectPrompt(let text):
+            return ["action": "injectPrompt", "text": text]
+        case .gitButlerStatus:
+            return ["action": "gitButlerStatus"]
+        case .gitButlerLand:
+            return ["action": "gitButlerLand"]
+        case .voice:
+            return ["action": "voice"]
+        case .effort(let step):
+            return ["action": "effort", "step": step]
+        case .model(let direction):
+            let dir: String
+            switch direction {
+            case .north: dir = "north"
+            case .south: dir = "south"
+            case .east: dir = "east"
+            case .west: dir = "west"
+            }
+            return ["action": "model", "dir": dir]
+        case .unbound:
+            return ["action": "unbound"]
+        }
+    }
+
+    public static func save(_ map: PadMap) throws {
+        try save(map, to: KeyBindings.configPath())
+    }
+
+    /// Replaces only the `map` key. Other fields in an existing object are
+    /// left alone. A missing or malformed file becomes `{ "map": ... }`.
+    public static func save(_ map: PadMap, to path: String) throws {
+        let url = URL(fileURLWithPath: path)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        var root: [String: Any] = [:]
+        if let data = FileManager.default.contents(atPath: path),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            root = json
+        }
+        root["map"] = map.encodedMap()
+        let out = try JSONSerialization.data(
+            withJSONObject: root,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        try out.write(to: url, options: .atomic)
+    }
+
     public static func load() -> PadMap {
         guard let data = FileManager.default.contents(atPath: KeyBindings.configPath()) else {
             return PadMap()

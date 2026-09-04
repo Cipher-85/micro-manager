@@ -105,4 +105,80 @@ final class PadMapTests: XCTestCase {
         XCTAssertEqual(map.action(for: 18), .injectPrompt("stick east"))
         XCTAssertEqual(map.action(for: 7), .herdr("next_tab"))
     }
+
+    // MARK: - Encode and save
+
+    private func roundTrip(_ map: PadMap) throws -> PadMap {
+        let data = try JSONSerialization.data(withJSONObject: ["map": map.encodedMap()])
+        return PadMap.parse(data)
+    }
+
+    /// Never the live micromanager config — a unique temp path per call.
+    private func tempConfigPath() -> String {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("padmap-tests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("config.json")
+            .path
+    }
+
+    func testDefaultsEncodeRoundTrips() throws {
+        XCTAssertEqual(try roundTrip(PadMap()), PadMap())
+    }
+
+    func testHerdrAndMacroEncodeRoundTrip() throws {
+        var map = PadMap()
+        map.set(.herdr("zoom"), for: 7)
+        map.set(.injectPrompt("Ship it"), for: 9)
+        let loaded = try roundTrip(map)
+        XCTAssertEqual(loaded.action(for: 7), .herdr("zoom"))
+        XCTAssertEqual(loaded.action(for: 9), .injectPrompt("Ship it"))
+    }
+
+    func testWideKeyEncodesAsCombinedId() {
+        let encoded = PadMap().encodedMap()
+        XCTAssertNotNil(encoded["10+11"])
+        XCTAssertNil(encoded["10"])
+        XCTAssertNil(encoded["11"])
+    }
+
+    func testSetOnWideKeySetsBothHalves() {
+        var map = PadMap()
+        map.set(.gitButlerLand, for: 10)
+        XCTAssertEqual(map.action(for: 10), .gitButlerLand)
+        XCTAssertEqual(map.action(for: 11), .gitButlerLand)
+    }
+
+    func testSaveMergesPreservingOtherKeys() throws {
+        let path = tempConfigPath()
+        let parent = URL(fileURLWithPath: path).deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        try #"{"claude":{"x":1},"keys":{"9":"old"},"codex":{"y":true}}"#
+            .write(toFile: path, atomically: true, encoding: .utf8)
+
+        var map = PadMap()
+        map.set(.voice, for: 9)
+        try PadMap.save(map, to: path)
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        XCTAssertEqual((json["claude"] as? [String: Any])?["x"] as? Int, 1)
+        XCTAssertEqual((json["keys"] as? [String: Any])?["9"] as? String, "old")
+        XCTAssertEqual((json["codex"] as? [String: Any])?["y"] as? Bool, true)
+        XCTAssertEqual(PadMap.parse(data).action(for: 9), .voice)
+    }
+
+    func testSaveCreatesMissingParentDirectory() throws {
+        let path = tempConfigPath()
+        try PadMap.save(PadMap(), to: path)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: path))
+    }
+
+    func testSaveUnboundKeyRoundTrips() throws {
+        let path = tempConfigPath()
+        var map = PadMap()
+        map.set(.unbound, for: 6)
+        try PadMap.save(map, to: path)
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        XCTAssertEqual(PadMap.parse(data).action(for: 6), .unbound)
+    }
 }

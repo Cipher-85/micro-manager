@@ -49,7 +49,7 @@ public final class BridgeController: ObservableObject {
     /// config edit only needs an off/on toggle, not a relaunch.
     public private(set) var keyBindings = KeyBindings.load()
     /// Firmware key id to action, reloaded next to `keyBindings`.
-    public private(set) var padMap = PadMap.load()
+    @Published public private(set) var padMap = PadMap.load()
 
     /// Called when the stack key is pressed. The bridge owns the key, the app
     /// owns the window, so this is where the two meet.
@@ -318,6 +318,19 @@ public final class BridgeController: ObservableObject {
     public func forceRepaint() async {
         lastFingerprint = nil
         await refresh()
+    }
+
+    /// Installs a new map in memory, writes `map` to config.json, and
+    /// repaints. A save failure is reported on `lastError` but does not
+    /// roll back the in-memory map. Lighting no-ops when the bridge is off.
+    public func replacePadMap(_ map: PadMap) async {
+        padMap = map
+        do {
+            try PadMap.save(map)
+        } catch {
+            lastError = error.localizedDescription
+        }
+        await forceRepaint()
     }
 
     private func refresh() async {

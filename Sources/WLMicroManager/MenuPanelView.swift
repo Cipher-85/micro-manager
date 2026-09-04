@@ -135,7 +135,7 @@ struct MenuPanelView: View {
         case .gitButlerStatus:
             return "GitButler stack for the focused agent"
         case .herdr(let name):
-            return herdrHelp(name)
+            return PadCatalog.herdrHelp(name)
         case .gitButlerLand:
             return "Land the focused agent's branches onto the target"
         case .injectPrompt(let text):
@@ -154,23 +154,6 @@ struct MenuPanelView: View {
         }
     }
 
-    private func herdrHelp(_ name: String) -> String {
-        switch name {
-        case "next_tab": return "Cycle tabs in the focused Herdr window"
-        case "previous_tab": return "Previous tab in the focused Herdr window"
-        case "new_tab": return "New tab in the focused Herdr window"
-        case "zoom": return "Zoom the focused pane"
-        case "split_vertical": return "Split the focused pane right"
-        case "split_horizontal": return "Split the focused pane down"
-        case "focus_pane_left": return "Focus the pane to the left"
-        case "focus_pane_right": return "Focus the pane to the right"
-        case "focus_pane_up": return "Focus the pane above"
-        case "focus_pane_down": return "Focus the pane below"
-        case "next_workspace": return "Next Herdr workspace"
-        case "previous_workspace": return "Previous Herdr workspace"
-        default: return "Herdr: \(name)"
-        }
-    }
 
     // MARK: - Agents
 
@@ -287,6 +270,10 @@ struct MenuPanelView: View {
                     InspectorLauncher.launch { inspectorError = $0 }
                 }
                 .help("Watch the traffic to and from the pad, and drive its lighting by hand")
+                Button("Keys") {
+                    KeysMapWindowController.shared.show(bridge: bridge)
+                }
+                .help("Remap pad keys")
                 Spacer()
                 Button("Quit") { NSApplication.shared.terminate(nil) }
             }

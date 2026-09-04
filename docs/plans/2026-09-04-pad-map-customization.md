@@ -1,6 +1,6 @@
 # Pad-map customization
 
-Status: **done — phase 3**
+Status: **done — phase 5**
 
 A real customization layer for the Creator Micro 2. Firmware key ids 0...18
 (the 13 keys, dial, and stick) map to a `PadAction`. Today's hardcoded
@@ -170,11 +170,11 @@ halves. Dial and stick may also be named:
    `previous_workspace`. Unknown names stay no-ops; still never crash.
    Not dispatched: `close_pane`, `close_tab`, `close_workspace`,
    `new_workspace`.
-4. **Editor in Micro Manager.** A map UI in the menu-bar app (panel or
-   sheet). Inspector is not the editor — it remains the traffic/keymap
-   debugger and must not grow a second copy of this map.
-5. **Write-back.** Persist `map` to `config.json` and reload without an
-   off/on toggle.
+4. **Editor in Micro Manager — done.** Keys window (`KeysMapWindowController`)
+   remaps ids 0...18. Inspector is not the editor.
+5. **Write-back — done.** Save writes only the `map` key to `config.json`
+   (`PadMap.save`) and `replacePadMap` hot-reloads in memory then
+   `forceRepaint`. No file watcher.
 
 ## Out of scope
 
