@@ -258,7 +258,7 @@ public enum HerdrClient {
 
     public static func splitPane(paneID: String, direction: String) async throws {
         _ = try await request("pane.split", params: [
-            "pane_id": paneID,
+            "target_pane_id": paneID,
             "direction": direction,
             "focus": true,
         ])
