@@ -77,6 +77,27 @@ public struct HerdrAgent: Equatable, Sendable {
 
 }
 
+public struct HerdrPane: Equatable, Sendable {
+    public var paneID: String
+    public var cwd: String?
+    public var foregroundCwd: String?
+
+    /// Last path component of the working directory, else the pane id.
+    public var title: String {
+        let directory = [foregroundCwd, cwd].compactMap { $0 }.first { !$0.isEmpty }
+        guard let directory else { return paneID }
+        return (directory as NSString).lastPathComponent
+    }
+
+    init?(json: [String: Any]) {
+        let paneID = json["pane_id"] as? String ?? ""
+        guard !paneID.isEmpty else { return nil }
+        self.paneID = paneID
+        cwd = json["cwd"] as? String
+        foregroundCwd = json["foreground_cwd"] as? String
+    }
+}
+
 public struct HerdrTab: Equatable, Sendable {
     public var tabID: String
     public var workspaceID: String
@@ -267,6 +288,17 @@ public enum HerdrClient {
 
     public static func focusWorkspace(_ workspaceID: String) async throws {
         _ = try await request("workspace.focus", params: ["workspace_id": workspaceID])
+    }
+
+    /// The pane that currently has focus, including a shell with no agent.
+    /// `pane.current` takes no `caller_pane_id`.
+    public static func currentPane() async throws -> HerdrPane? {
+        let result = try await request("pane.current")
+        if let pane = HerdrPane(json: result) { return pane }
+        if let nested = result["pane"] as? [String: Any] {
+            return HerdrPane(json: nested)
+        }
+        return nil
     }
 
     public static func zoomPane(paneID: String) async throws {

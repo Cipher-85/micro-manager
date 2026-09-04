@@ -120,6 +120,9 @@ final class ClosePanelController {
         do {
             switch name {
             case "close_pane":
+                if let pane = try await HerdrClient.currentPane() {
+                    return .ready(title: pane.title, kind: "pane", targetID: pane.paneID)
+                }
                 guard let agent = try await HerdrClient.focusedAgent() else {
                     return .blocked(
                         title: "No focused agent",
