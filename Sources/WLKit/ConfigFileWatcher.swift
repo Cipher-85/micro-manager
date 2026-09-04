@@ -24,7 +24,12 @@ public final class ConfigFileWatcher: @unchecked Sendable {
         queue.sync { stopLocked() }
     }
 
-    deinit { stop() }
+    deinit {
+        pending?.cancel()
+        pending = nil
+        source?.cancel()
+        source = nil
+    }
 
     private func startLocked() {
         stopLocked()

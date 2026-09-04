@@ -324,9 +324,6 @@ public final class BridgeController: ObservableObject {
         await refresh()
     }
 
-    /// Installs a new map in memory, writes `map` to config.json, and
-    /// repaints. A save failure is reported on `lastError` but does not
-    /// roll back the in-memory map. Lighting no-ops when the bridge is off.
     private func startConfigWatch() {
         configWatcher?.stop()
         let watcher = ConfigFileWatcher(path: KeyBindings.configPath()) { [weak self] in
@@ -345,6 +342,9 @@ public final class BridgeController: ObservableObject {
         await forceRepaint()
     }
 
+    /// Installs a new map in memory, writes `map` to config.json, and
+    /// repaints. A save failure is reported on `lastError` but does not
+    /// roll back the in-memory map. Lighting no-ops when the bridge is off.
     public func replacePadMap(_ map: PadMap) async {
         padMap = map
         do {

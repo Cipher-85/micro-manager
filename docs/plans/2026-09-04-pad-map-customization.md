@@ -174,7 +174,8 @@ halves. Dial and stick may also be named:
    remaps ids 0...18. Inspector is not the editor.
 5. **Write-back — done.** Save writes only the `map` key to `config.json`
    (`PadMap.save`) and `replacePadMap` hot-reloads in memory then
-   `forceRepaint`. No file watcher.
+   `forceRepaint`. A directory watch (see Follow-ups) reloads without a
+   toggle.
 
 ## Follow-ups
 
