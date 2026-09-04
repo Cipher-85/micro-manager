@@ -100,6 +100,25 @@ public struct HerdrTab: Equatable, Sendable {
     }
 }
 
+public struct HerdrWorkspace: Equatable, Sendable {
+    public var workspaceID: String
+    public var number: Int
+    public var focused: Bool
+
+    init(json: [String: Any]) {
+        workspaceID = json["workspace_id"] as? String ?? ""
+        number = json["number"] as? Int ?? 0
+        focused = json["focused"] as? Bool ?? false
+    }
+
+    /// For tests.
+    public init(workspaceID: String, number: Int, focused: Bool = false) {
+        self.workspaceID = workspaceID
+        self.number = number
+        self.focused = focused
+    }
+}
+
 public enum HerdrError: LocalizedError {
     case cannotConnect(String, String)
     case timeout(String)
@@ -217,6 +236,41 @@ public enum HerdrClient {
         _ = try await request("tab.focus", params: ["tab_id": tabID])
     }
 
+    public static func createTab(workspaceID: String? = nil) async throws {
+        var params: [String: Any] = ["focus": true]
+        if let workspaceID { params["workspace_id"] = workspaceID }
+        _ = try await request("tab.create", params: params)
+    }
+
+    public static func listWorkspaces() async throws -> [HerdrWorkspace] {
+        let result = try await request("workspace.list")
+        let raw = result["workspaces"] as? [[String: Any]] ?? []
+        return raw.map(HerdrWorkspace.init(json:))
+    }
+
+    public static func focusWorkspace(_ workspaceID: String) async throws {
+        _ = try await request("workspace.focus", params: ["workspace_id": workspaceID])
+    }
+
+    public static func zoomPane(paneID: String) async throws {
+        _ = try await request("pane.zoom", params: ["pane_id": paneID, "mode": "toggle"])
+    }
+
+    public static func splitPane(paneID: String, direction: String) async throws {
+        _ = try await request("pane.split", params: [
+            "pane_id": paneID,
+            "direction": direction,
+            "focus": true,
+        ])
+    }
+
+    public static func focusPane(paneID: String, direction: String) async throws {
+        _ = try await request("pane.focus_direction", params: [
+            "pane_id": paneID,
+            "direction": direction,
+        ])
+    }
+
     /// Injects key chords into a pane, crossterm-style names ("ctrl+alt+v",
     /// "f13", "enter"). The pane's terminal encodes them as if typed.
     public static func sendKeys(paneID: String, keys: [String]) async throws {
@@ -229,25 +283,57 @@ public enum HerdrClient {
         _ = try await request("pane.send_text", params: ["pane_id": paneID, "text": text])
     }
 
-    /// Focuses the tab after the focused one in its workspace, wrapping at the
-    /// end. Tabs in other workspaces are left alone: cycling is a
-    /// within-window gesture, not a window switcher.
-    public static func cycleTabs() async throws {
-        guard let next = nextTab(in: try await listTabs()) else { return }
+    /// Focuses the tab `step` away from the focused one in its workspace,
+    /// wrapping. Tabs in other workspaces are left alone: cycling is a
+    /// within-window gesture, not a window switcher. `step` defaults to +1.
+    public static func cycleTabs(step: Int = 1) async throws {
+        guard let next = neighborTab(in: try await listTabs(), step: step) else { return }
         try await focusTab(next.tabID)
     }
 
     /// The tab `cycleTabs` would focus, or nil when there is nothing to do —
     /// no focused tab, or a workspace with a single tab.
     public static func nextTab(in tabs: [HerdrTab]) -> HerdrTab? {
+        neighborTab(in: tabs, step: 1)
+    }
+
+    public static func previousTab(in tabs: [HerdrTab]) -> HerdrTab? {
+        neighborTab(in: tabs, step: -1)
+    }
+
+    public static func neighborTab(in tabs: [HerdrTab], step: Int) -> HerdrTab? {
         guard let focused = tabs.first(where: \.focused) else { return nil }
         let siblings = tabs
             .filter { $0.workspaceID == focused.workspaceID }
             .sorted { $0.number < $1.number }
-        guard siblings.count > 1,
-              let index = siblings.firstIndex(of: focused)
-        else { return nil }
-        return siblings[(index + 1) % siblings.count]
+        return neighbor(in: siblings, of: focused, step: step)
+    }
+
+    /// Focuses the workspace `step` away from the focused one, wrapping.
+    /// No-op when none is focused or there is only one.
+    public static func cycleWorkspaces(step: Int = 1) async throws {
+        guard let next = neighborWorkspace(in: try await listWorkspaces(), step: step) else { return }
+        try await focusWorkspace(next.workspaceID)
+    }
+
+    public static func nextWorkspace(in workspaces: [HerdrWorkspace]) -> HerdrWorkspace? {
+        neighborWorkspace(in: workspaces, step: 1)
+    }
+
+    public static func previousWorkspace(in workspaces: [HerdrWorkspace]) -> HerdrWorkspace? {
+        neighborWorkspace(in: workspaces, step: -1)
+    }
+
+    public static func neighborWorkspace(in workspaces: [HerdrWorkspace], step: Int) -> HerdrWorkspace? {
+        guard let focused = workspaces.first(where: \.focused) else { return nil }
+        let ordered = workspaces.sorted { $0.number < $1.number }
+        return neighbor(in: ordered, of: focused, step: step)
+    }
+
+    private static func neighbor<T: Equatable>(in items: [T], of focused: T, step: Int) -> T? {
+        guard step != 0, items.count > 1, let index = items.firstIndex(of: focused) else { return nil }
+        let count = items.count
+        return items[((index + step) % count + count) % count]
     }
 
     private static let counter = Counter()

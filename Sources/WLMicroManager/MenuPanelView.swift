@@ -134,8 +134,8 @@ struct MenuPanelView: View {
         switch action {
         case .gitButlerStatus:
             return "GitButler stack for the focused agent"
-        case .herdr:
-            return "Cycle tabs in the focused Herdr window"
+        case .herdr(let name):
+            return herdrHelp(name)
         case .gitButlerLand:
             return "Land the focused agent's branches onto the target"
         case .injectPrompt(let text):
@@ -151,6 +151,24 @@ struct MenuPanelView: View {
             return "Model"
         case .focusSlot, .unbound:
             return "Key \(index)"
+        }
+    }
+
+    private func herdrHelp(_ name: String) -> String {
+        switch name {
+        case "next_tab": return "Cycle tabs in the focused Herdr window"
+        case "previous_tab": return "Previous tab in the focused Herdr window"
+        case "new_tab": return "New tab in the focused Herdr window"
+        case "zoom": return "Zoom the focused pane"
+        case "split_vertical": return "Split the focused pane right"
+        case "split_horizontal": return "Split the focused pane down"
+        case "focus_pane_left": return "Focus the pane to the left"
+        case "focus_pane_right": return "Focus the pane to the right"
+        case "focus_pane_up": return "Focus the pane above"
+        case "focus_pane_down": return "Focus the pane below"
+        case "next_workspace": return "Next Herdr workspace"
+        case "previous_workspace": return "Previous Herdr workspace"
+        default: return "Herdr: \(name)"
         }
     }
 

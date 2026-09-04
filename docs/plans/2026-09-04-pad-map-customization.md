@@ -1,6 +1,6 @@
 # Pad-map customization
 
-Status: **done — phase 2**
+Status: **done — phase 3**
 
 A real customization layer for the Creator Micro 2. Firmware key ids 0...18
 (the 13 keys, dial, and stick) map to a `PadAction`. Today's hardcoded
@@ -163,8 +163,13 @@ halves. Dial and stick may also be named:
    tab / land thread helpers take an `id` so a remapped key carries the
    light. `BridgeController.refresh` uses that overload. Menu pad clicks go
    through `handleKeyPress`; help and disabled follow the action.
-3. **Herdr catalog.** Dispatch names besides `next_tab`. Unknown names stay
-   no-ops; still never crash.
+3. **Herdr catalog — done.** `BridgeController.performHerdr` dispatches
+   `next_tab`, `previous_tab`, `new_tab`, `zoom`, `split_vertical`,
+   `split_horizontal`, `focus_pane_left`, `focus_pane_right`,
+   `focus_pane_up`, `focus_pane_down`, `next_workspace`,
+   `previous_workspace`. Unknown names stay no-ops; still never crash.
+   Not dispatched: `close_pane`, `close_tab`, `close_workspace`,
+   `new_workspace`.
 4. **Editor in Micro Manager.** A map UI in the menu-bar app (panel or
    sheet). Inspector is not the editor — it remains the traffic/keymap
    debugger and must not grow a second copy of this map.

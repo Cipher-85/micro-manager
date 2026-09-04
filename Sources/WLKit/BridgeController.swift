@@ -411,10 +411,8 @@ public final class BridgeController: ObservableObject {
         switch padMap.action(for: index) {
         case .gitButlerStatus:
             onStackKey?()
-        case .herdr("next_tab"):
-            Task { await cycleTabs() }
-        case .herdr:
-            break
+        case .herdr(let name):
+            Task { await performHerdr(name) }
         case .gitButlerLand:
             onLandKey?()
         case .injectPrompt(let text):
@@ -463,11 +461,53 @@ public final class BridgeController: ObservableObject {
 
     /// Advances the focused workspace to its next tab, wrapping.
     public func cycleTabs() async {
+        await performHerdr("next_tab")
+    }
+
+    /// Runs a named Herdr action. Unknown names are no-ops; failures land on
+    /// `lastError`. Never throws out of here.
+    func performHerdr(_ name: String) async {
         do {
-            try await HerdrClient.cycleTabs()
+            switch name {
+            case "next_tab":
+                try await HerdrClient.cycleTabs(step: 1)
+            case "previous_tab":
+                try await HerdrClient.cycleTabs(step: -1)
+            case "new_tab":
+                let workspaceID = try await HerdrClient.listTabs().first(where: \.focused)?.workspaceID
+                try await HerdrClient.createTab(workspaceID: workspaceID)
+            case "zoom":
+                guard let pane = try await HerdrClient.focusedAgent()?.paneID else { return }
+                try await HerdrClient.zoomPane(paneID: pane)
+            case "split_vertical":
+                guard let pane = try await HerdrClient.focusedAgent()?.paneID else { return }
+                try await HerdrClient.splitPane(paneID: pane, direction: "right")
+            case "split_horizontal":
+                guard let pane = try await HerdrClient.focusedAgent()?.paneID else { return }
+                try await HerdrClient.splitPane(paneID: pane, direction: "down")
+            case "focus_pane_left":
+                try await focusPane(direction: "left")
+            case "focus_pane_right":
+                try await focusPane(direction: "right")
+            case "focus_pane_up":
+                try await focusPane(direction: "up")
+            case "focus_pane_down":
+                try await focusPane(direction: "down")
+            case "next_workspace":
+                try await HerdrClient.cycleWorkspaces(step: 1)
+            case "previous_workspace":
+                try await HerdrClient.cycleWorkspaces(step: -1)
+            default:
+                break
+            }
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    private func focusPane(direction: String) async throws {
+        guard let pane = try await HerdrClient.focusedAgent()?.paneID else { return }
+        try await HerdrClient.focusPane(paneID: pane, direction: direction)
     }
 
     /// Repaints the stack key. Called by the app when the window opens or

@@ -51,4 +51,45 @@ final class HerdrTabCycleTests: XCTestCase {
         ]
         XCTAssertNil(HerdrClient.nextTab(in: tabs))
     }
+
+    func testPreviousTabGoesToTheEarlierNumber() {
+        let tabs = [
+            HerdrTab(tabID: "t1", number: 1),
+            HerdrTab(tabID: "t2", number: 2, focused: true),
+            HerdrTab(tabID: "t3", number: 3),
+        ]
+        XCTAssertEqual(HerdrClient.previousTab(in: tabs)?.tabID, "t1")
+    }
+
+    func testPreviousTabWrapsFromTheFirstToTheLast() {
+        let tabs = [
+            HerdrTab(tabID: "t1", number: 1, focused: true),
+            HerdrTab(tabID: "t2", number: 2),
+            HerdrTab(tabID: "t3", number: 3),
+        ]
+        XCTAssertEqual(HerdrClient.previousTab(in: tabs)?.tabID, "t3")
+    }
+
+    func testPreviousTabStaysInsideTheFocusedWorkspace() {
+        let tabs = [
+            HerdrTab(tabID: "a1", workspaceID: "a", number: 1),
+            HerdrTab(tabID: "a2", workspaceID: "a", number: 2, focused: true),
+            HerdrTab(tabID: "a3", workspaceID: "a", number: 3),
+            HerdrTab(tabID: "b1", workspaceID: "b", number: 1),
+            HerdrTab(tabID: "b2", workspaceID: "b", number: 2),
+        ]
+        XCTAssertEqual(HerdrClient.previousTab(in: tabs)?.tabID, "a1")
+    }
+
+    func testPreviousTabSingleTabHasNowhereToGo() {
+        XCTAssertNil(HerdrClient.previousTab(in: [HerdrTab(tabID: "t1", number: 1, focused: true)]))
+    }
+
+    func testPreviousTabNoFocusedTabDoesNothing() {
+        let tabs = [
+            HerdrTab(tabID: "t1", number: 1),
+            HerdrTab(tabID: "t2", number: 2),
+        ]
+        XCTAssertNil(HerdrClient.previousTab(in: tabs))
+    }
 }
